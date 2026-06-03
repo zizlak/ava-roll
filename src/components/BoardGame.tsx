@@ -97,51 +97,61 @@ export const BoardGame: React.FC = () => {
 
   const movePlayer = (steps: number) => {
     setGameState(prev => ({ ...prev, isMoving: true }));
-    
+    sounds.move();
+
+    // First, update the player's position so the token flies to the new cell
+    let landedPlayer: 1 | 2 = 1;
+    let landedPosition = 0;
+    let landedWinner: 1 | 2 | null = null;
+    let landedShortcut: number | null = null;
+
+    setGameState(prev => {
+      const currentPlayer = prev.currentPlayer;
+      const currentPos = currentPlayer === 1 ? prev.player1Position : prev.player2Position;
+      const nextStart = currentPlayer === 1 ? prev.player1NextStart : prev.player2NextStart;
+
+      const startPos = nextStart !== null ? nextStart : currentPos;
+      const newPosition = Math.min(startPos + steps, BOARD_SIZE);
+
+      let winner: 1 | 2 | null = null;
+      if (newPosition >= BOARD_SIZE) winner = currentPlayer;
+
+      landedPlayer = currentPlayer;
+      landedPosition = newPosition;
+      landedWinner = winner;
+      if (!winner && SHORTCUTS[newPosition as keyof typeof SHORTCUTS]) {
+        landedShortcut = SHORTCUTS[newPosition as keyof typeof SHORTCUTS];
+      }
+
+      return {
+        ...prev,
+        [currentPlayer === 1 ? 'player1Position' : 'player2Position']: newPosition,
+        [currentPlayer === 1 ? 'player1NextStart' : 'player2NextStart']: landedShortcut,
+        gameWinner: winner,
+      };
+    });
+
+    // After the fly animation completes, reveal the GIF / handle shortcut / win
     setTimeout(() => {
-      setGameState(prev => {
-        const currentPlayer = prev.currentPlayer;
-        const currentPos = currentPlayer === 1 ? prev.player1Position : prev.player2Position;
-        const nextStart = currentPlayer === 1 ? prev.player1NextStart : prev.player2NextStart;
-        
-        // Calculate starting position (considering shortcuts)
-        const startPos = nextStart !== null ? nextStart : currentPos;
-        const newPosition = Math.min(startPos + steps, BOARD_SIZE);
-        
-        // Check for win condition
-        let winner: 1 | 2 | null = null;
-        if (newPosition >= BOARD_SIZE) {
-          winner = currentPlayer;
+      setGameState(prev => ({ ...prev, isMoving: false }));
+
+      if (landedWinner) {
+        sounds.win();
+        return;
+      }
+
+      if (landedPosition > 0) {
+        revealGIF(landedPosition, landedPlayer);
+
+        if (landedShortcut !== null) {
+          sounds.shortcut();
+          toast({
+            title: 'Shortcut Found!',
+            description: `Player ${landedPlayer} will start their next turn from cell ${landedShortcut}!`,
+          });
         }
-
-        // Update positions
-        const newState = {
-          ...prev,
-          [currentPlayer === 1 ? 'player1Position' : 'player2Position']: newPosition,
-          [currentPlayer === 1 ? 'player1NextStart' : 'player2NextStart']: null,
-          isMoving: false,
-          gameWinner: winner
-        };
-
-        // Handle GIF reveal and shortcuts only if not winning
-        if (!winner && newPosition > 0) {
-          revealGIF(newPosition, currentPlayer);
-          
-          // Check for shortcuts
-          if (SHORTCUTS[newPosition as keyof typeof SHORTCUTS]) {
-            const shortcutDestination = SHORTCUTS[newPosition as keyof typeof SHORTCUTS];
-            newState[currentPlayer === 1 ? 'player1NextStart' : 'player2NextStart'] = shortcutDestination;
-            
-            toast({
-              title: "Shortcut Found!",
-              description: `Player ${currentPlayer} will start their next turn from cell ${shortcutDestination}!`,
-            });
-          }
-        }
-
-        return newState;
-      });
-    }, 600);
+      }
+    }, 850);
   };
 
   const revealGIF = (cellNumber: number, player: 1 | 2) => {
