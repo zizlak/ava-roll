@@ -187,6 +187,7 @@ export const BoardGame: React.FC = () => {
       // Show the GIF modal
       setCurrentGIF(gifUrl);
       setShowGIFModal(true);
+      sounds.reveal();
 
       return newState;
     });
