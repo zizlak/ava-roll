@@ -85,6 +85,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     };
   };
 
+  const applyScale = (s: TokenStyle | null, scale: number): TokenStyle | null => {
+    if (!s) return s;
+    if (scale === 1) return s;
+    const newW = s.width * scale;
+    const newH = s.height * scale;
+    return {
+      ...s,
+      left: s.left - (newW - s.width) / 2,
+      top: s.top - (newH - s.height) / 2,
+      width: newW,
+      height: newH,
+    };
+  };
+
   useLayoutEffect(() => {
     const update = () => {
       const p1Pos = gameState.player1Position;
