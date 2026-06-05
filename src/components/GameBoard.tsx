@@ -92,9 +92,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
       const p1Key = slotKey(p1Pos);
       const p2Key = slotKey(p2Pos);
       const sameSlot = p1Key === p2Key;
+      const atStartP1 = p1Key === 'START';
+      const atStartP2 = p2Key === 'START';
 
-      setP1Style(computeStyle(p1Pos, sameSlot ? -1 : 0));
-      setP2Style(computeStyle(p2Pos, sameSlot ? 1 : 0));
+      // On the START gate, players always keep their fixed sides (P1 left, P2 right),
+      // so removing one doesn't recenter the other.
+      const p1Offset = atStartP1 ? -1 : sameSlot ? -1 : 0;
+      const p2Offset = atStartP2 ? 1 : sameSlot ? 1 : 0;
+
+      const isCurrentP1 = gameState.currentPlayer === 1 && !gameState.gameWinner;
+      const isCurrentP2 = gameState.currentPlayer === 2 && !gameState.gameWinner;
+
+      setP1Style(applyScale(computeStyle(p1Pos, p1Offset), isCurrentP1 ? 1.2 : 1));
+      setP2Style(applyScale(computeStyle(p2Pos, p2Offset), isCurrentP2 ? 1.2 : 1));
+
 
       const cont = containerRef.current;
       if (cont) {
