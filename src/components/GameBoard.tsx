@@ -152,6 +152,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     gameState.player1Position,
     gameState.player2Position,
     gameState.gameWinner,
+    gameState.currentPlayer,
     shortcuts,
   ]);
 
