@@ -249,41 +249,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           ))}
         </div>
 
-        {/* Shortcut arrows overlay */}
-        {svgSize.w > 0 && (
-          <svg
-            className="pointer-events-none absolute inset-0"
-            width={svgSize.w}
-            height={svgSize.h}
-            style={{ zIndex: 15 }}
-          >
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="6"
-                markerHeight="6"
-                refX="5"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M0,0 L6,3 L0,6 z" fill="hsl(48 100% 60%)" />
-              </marker>
-            </defs>
-            {arrows.map((a, i) => (
-              <path
-                key={i}
-                d={a.d}
-                stroke="hsl(48 100% 60%)"
-                strokeWidth={4}
-                strokeLinecap="round"
-                strokeDasharray="8 6"
-                fill="none"
-                opacity={0.85}
-                markerEnd="url(#arrowhead)"
-              />
-            ))}
-          </svg>
-        )}
 
         {renderToken(1, p1Style, playerMale)}
         {renderToken(2, p2Style, playerFemale)}
