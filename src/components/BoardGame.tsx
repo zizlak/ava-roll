@@ -213,8 +213,11 @@ export const BoardGame: React.FC = () => {
       };
       setCurrentGIF(gifUrl);
       setReplayMode(false);
-      setShowGIFModal(true);
-      sounds.reveal();
+      setRevealInfo({ player, cell: cellNumber });
+      setTimeout(() => {
+        setShowGIFModal(true);
+        sounds.reveal();
+      }, 350);
       return newState;
     });
   };
