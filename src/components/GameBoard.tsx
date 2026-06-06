@@ -34,8 +34,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
   const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
   const [p2Style, setP2Style] = useState<TokenStyle | null>(null);
-  const [arrows, setArrows] = useState<ArrowPath[]>([]);
-  const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
 
   const getZoneClass = (cellNumber: number) => {
     if (cellNumber <= 10) return 'bg-gradient-zone-1';
