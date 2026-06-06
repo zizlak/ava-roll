@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { Crown, Flag, Play } from 'lucide-react';
+import { Crown, Flag, Play, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GameState } from './BoardGame';
 import playerMale from '@/assets/player-male.png';
