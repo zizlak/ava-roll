@@ -280,6 +280,12 @@ export const BoardGame: React.FC = () => {
     const pos = player === 1 ? gameState.player1Position : gameState.player2Position;
     const stack = player === 1 ? gameState.player1Stack : gameState.player2Stack;
     const img = player === 1 ? playerMale : playerFemale;
+    const isEditing = editingPlayer === player;
+    const saveName = () => {
+      const v = nameDraft.trim();
+      setPlayerNames(prev => ({ ...prev, [player]: v || `Player ${player}` }));
+      setEditingPlayer(null);
+    };
     return (
       <div
         className={cn(
@@ -292,8 +298,33 @@ export const BoardGame: React.FC = () => {
         )}
       >
         <img src={img} alt={`Player ${player}`} className="w-12 h-12 object-contain" />
-        <div className="flex-1">
-          <div className="font-semibold text-sm">Player {player}{isCurrent && ' • turn'}</div>
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <Input
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingPlayer(null); }}
+                className="h-7 text-sm"
+                maxLength={20}
+              />
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={saveName}>
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <div className="font-semibold text-sm truncate">{playerNames[player]}{isCurrent && ' • turn'}</div>
+              <button
+                onClick={() => { setNameDraft(playerNames[player]); setEditingPlayer(player); }}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Edit name"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            </div>
+          )}
           <div className="text-xs text-muted-foreground">
             Cell <span className="font-bold text-foreground">{pos}</span>
           </div>
