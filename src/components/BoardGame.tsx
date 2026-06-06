@@ -228,6 +228,7 @@ export const BoardGame: React.FC = () => {
     if (!url) return;
     sounds.click();
     setCurrentGIF(url);
+    setRevealInfo({ player, cell: cellNumber });
     setReplayMode(true);
     setShowGIFModal(true);
   };
