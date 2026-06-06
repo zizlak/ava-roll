@@ -25,12 +25,13 @@ type ArrowPath = {
   d: string;
 };
 
-// 8 columns x 4 rows = 32 playing cells.
+// 8 columns x 4 rows = 32 playing cells. Snake layout so consecutive cells
+// are physically adjacent (8 -> 9, 16 -> 17, 24 -> 25).
 const LAYOUT: number[][] = [
   [1, 2, 3, 4, 5, 6, 7, 8],
-  [9, 10, 11, 12, 13, 14, 15, 16],
+  [16, 15, 14, 13, 12, 11, 10, 9],
   [17, 18, 19, 20, 21, 22, 23, 24],
-  [25, 26, 27, 28, 29, 30, 31, 32],
+  [32, 31, 30, 29, 28, 27, 26, 25],
 ];
 
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward }) => {
@@ -185,25 +186,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           {cellNumber}
         </div>
 
-        {(p1Activated || p2Activated) && (
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 z-20">
-            {p1Activated && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 1); }}
-                className="w-4 h-4 rounded-full bg-player-1 ring-1 ring-white/70 hover:scale-125 transition-transform"
-                aria-label={`Replay Player 1 reward at cell ${cellNumber}`}
-                title="Player 1 reward"
-              />
-            )}
-            {p2Activated && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 2); }}
-                className="w-4 h-4 rounded-full bg-player-2 ring-1 ring-white/70 hover:scale-125 transition-transform"
-                aria-label={`Replay Player 2 reward at cell ${cellNumber}`}
-                title="Player 2 reward"
-              />
-            )}
-          </div>
+        {p1Activated && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 1); }}
+            className="absolute bottom-1 left-1/4 -translate-x-1/2 w-4 h-4 rounded-full bg-player-1 ring-1 ring-white/70 hover:scale-125 transition-transform z-20"
+            aria-label={`Replay Player 1 reward at cell ${cellNumber}`}
+            title="Player 1 reward"
+          />
+        )}
+        {p2Activated && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 2); }}
+            className="absolute bottom-1 left-3/4 -translate-x-1/2 w-4 h-4 rounded-full bg-player-2 ring-1 ring-white/70 hover:scale-125 transition-transform z-20"
+            aria-label={`Replay Player 2 reward at cell ${cellNumber}`}
+            title="Player 2 reward"
+          />
         )}
       </div>
     );
@@ -227,14 +224,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           height: style.height,
           opacity: style.opacity,
           transition:
-            'left 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
+            'left 0.28s ease-in-out, top 0.28s ease-in-out, width 0.28s ease, height 0.28s ease, opacity 0.3s ease',
           zIndex: 30,
         }}
       >
         <div className="relative w-full h-full flex items-end justify-center">
           {isCurrent && (
             <Crown
-              className="absolute -top-1 left-1/2 -translate-x-1/2 h-5 w-5 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] animate-fade-scale"
+              className="absolute left-1/2 h-5 w-5 text-yellow-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] animate-fade-scale"
+              style={{ top: '25%', transform: 'translate(-50%, -110%)' }}
               fill="currentColor"
               strokeWidth={1.5}
             />
