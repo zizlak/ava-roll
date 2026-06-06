@@ -227,7 +227,7 @@ export const BoardGame: React.FC = () => {
       setTimeout(() => {
         setShowGIFModal(true);
         sounds.reveal();
-      }, 350);
+      }, 750);
       return newState;
     });
   };
