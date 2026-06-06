@@ -19,11 +19,6 @@ type TokenStyle = {
   opacity: number;
 };
 
-type ArrowPath = {
-  from: number;
-  to: number;
-  d: string;
-};
 
 // 8 columns x 4 rows = 32 playing cells. Snake layout so consecutive cells
 // are physically adjacent (8 -> 9, 16 -> 17, 24 -> 25).
