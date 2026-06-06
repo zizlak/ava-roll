@@ -186,25 +186,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           {cellNumber}
         </div>
 
-        {(p1Activated || p2Activated) && (
-          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 z-20">
-            {p1Activated && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 1); }}
-                className="w-4 h-4 rounded-full bg-player-1 ring-1 ring-white/70 hover:scale-125 transition-transform"
-                aria-label={`Replay Player 1 reward at cell ${cellNumber}`}
-                title="Player 1 reward"
-              />
-            )}
-            {p2Activated && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 2); }}
-                className="w-4 h-4 rounded-full bg-player-2 ring-1 ring-white/70 hover:scale-125 transition-transform"
-                aria-label={`Replay Player 2 reward at cell ${cellNumber}`}
-                title="Player 2 reward"
-              />
-            )}
-          </div>
+        {p1Activated && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 1); }}
+            className="absolute bottom-1 left-1/4 -translate-x-1/2 w-4 h-4 rounded-full bg-player-1 ring-1 ring-white/70 hover:scale-125 transition-transform z-20"
+            aria-label={`Replay Player 1 reward at cell ${cellNumber}`}
+            title="Player 1 reward"
+          />
+        )}
+        {p2Activated && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 2); }}
+            className="absolute bottom-1 left-3/4 -translate-x-1/2 w-4 h-4 rounded-full bg-player-2 ring-1 ring-white/70 hover:scale-125 transition-transform z-20"
+            aria-label={`Replay Player 2 reward at cell ${cellNumber}`}
+            title="Player 2 reward"
+          />
         )}
       </div>
     );
