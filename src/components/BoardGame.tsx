@@ -138,48 +138,22 @@ export const BoardGame: React.FC = () => {
     const currentPos = gameState[posField];
     const nextStart = gameState[nextField];
 
-    const startFrom = nextStart !== null ? nextStart - 1 : currentPos;
-    const targetPos = Math.min(startFrom + steps, BOARD_SIZE);
-    const totalSteps = targetPos - startFrom;
-
-    setGameState(prev => ({
-      ...prev,
-      isMoving: true,
-      [posField]: startFrom,
-      [nextField]: null,
-    }));
+    setGameState(prev => ({ ...prev, isMoving: true, [nextField]: null }));
     sounds.move();
 
     const STEP_MS = 300;
-    let step = 0;
 
-    const tick = () => {
-      step++;
-      const newPos = startFrom + step;
-      setGameState(prev => ({ ...prev, [posField]: newPos }));
-
-      if (step < totalSteps) {
-        setTimeout(tick, STEP_MS);
-        return;
-      }
-
-      // Final step landed
-      const winner: 1 | 2 | null = newPos >= BOARD_SIZE ? currentPlayer : null;
-      const shortcut = !winner ? (SHORTCUTS[newPos as keyof typeof SHORTCUTS] ?? null) : null;
-
+    const finish = (landed: number) => {
+      const winner: 1 | 2 | null = landed >= BOARD_SIZE ? currentPlayer : null;
+      const shortcut = !winner ? (SHORTCUTS[landed as keyof typeof SHORTCUTS] ?? null) : null;
       setGameState(prev => ({
         ...prev,
         isMoving: false,
         gameWinner: winner,
         [nextField]: shortcut,
       }));
-
-      if (winner) {
-        sounds.win();
-        return;
-      }
-
-      revealGIF(newPos, currentPlayer);
+      if (winner) { sounds.win(); return; }
+      revealGIF(landed, currentPlayer);
       if (shortcut !== null) {
         sounds.shortcut();
         toast({
@@ -189,7 +163,41 @@ export const BoardGame: React.FC = () => {
       }
     };
 
-    setTimeout(tick, STEP_MS);
+    const startStepping = (from: number, count: number) => {
+      const targetPos = Math.min(from + count, BOARD_SIZE);
+      const totalSteps = targetPos - from;
+      if (totalSteps <= 0) { finish(from); return; }
+      let step = 0;
+      const tick = () => {
+        step++;
+        const newPos = from + step;
+        setGameState(prev => ({ ...prev, [posField]: newPos }));
+        if (step < totalSteps) { setTimeout(tick, STEP_MS); return; }
+        finish(newPos);
+      };
+      setTimeout(tick, STEP_MS);
+    };
+
+    if (nextStart !== null) {
+      // Teleport: shrink at current cell, move to destination, grow back, then step (steps - 1) more
+      setGameState(prev => ({
+        ...prev,
+        tokenScale: { ...prev.tokenScale, [currentPlayer]: 0 },
+      }));
+      setTimeout(() => {
+        setGameState(prev => ({ ...prev, [posField]: nextStart }));
+        // Allow position to apply at scale 0, then grow back
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            tokenScale: { ...prev.tokenScale, [currentPlayer]: 1 },
+          }));
+          setTimeout(() => startStepping(nextStart, steps - 1), 500);
+        }, 60);
+      }, 450);
+    } else {
+      startStepping(currentPos, steps);
+    }
   };
 
   const revealGIF = (cellNumber: number, player: 1 | 2) => {
