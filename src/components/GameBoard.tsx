@@ -193,6 +193,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     if (!style) return null;
     const isCurrent =
       gameState.currentPlayer === player && !gameState.isMoving && !gameState.gameWinner;
+    const teleScale = gameState.tokenScale?.[player] ?? 1;
     return (
       <div
         className="pointer-events-none absolute"
@@ -201,9 +202,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           top: style.top,
           width: style.width,
           height: style.height,
-          opacity: style.opacity,
+          opacity: style.opacity * teleScale,
+          transform: `scale(${teleScale})`,
+          transformOrigin: 'center center',
           transition:
-            'left 0.28s ease-in-out, top 0.28s ease-in-out, width 0.28s ease, height 0.28s ease, opacity 0.3s ease',
+            'left 0.28s ease-in-out, top 0.28s ease-in-out, width 0.28s ease, height 0.28s ease, opacity 0.4s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
           zIndex: 30,
         }}
       >
