@@ -114,30 +114,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
       setP1Style(applyScale(computeStyle(p1Pos, p1Offset), isCurrentP1 ? 1.2 : 1));
       setP2Style(applyScale(computeStyle(p2Pos, p2Offset), isCurrentP2 ? 1.2 : 1));
 
-
-      const cont = containerRef.current;
-      if (cont) {
-        setSvgSize({ w: cont.clientWidth, h: cont.clientHeight });
-      }
-
-      const newArrows: ArrowPath[] = [];
-      Object.entries(shortcuts).forEach(([fromStr, to]) => {
-        const from = Number(fromStr);
-        const a = cellRect(String(from));
-        const b = cellRect(String(to));
-        if (!a || !b) return;
-        const startX = a.x;
-        const startY = a.y - a.h * 0.25;
-        const endX = b.x;
-        const endY = b.y - b.h * 0.28;
-        const midX = (startX + endX) / 2;
-        const lift = Math.max(40, Math.abs(endX - startX) * 0.25);
-        const minY = Math.min(startY, endY);
-        const ctrlY = minY - lift;
-        const d = `M ${startX} ${startY} Q ${midX} ${ctrlY} ${endX} ${endY}`;
-        newArrows.push({ from, to, d });
-      });
-      setArrows(newArrows);
     };
     update();
     window.addEventListener('resize', update);
