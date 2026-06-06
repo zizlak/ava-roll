@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { Crown, Flag, Play } from 'lucide-react';
+import { Crown, Flag, Play, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GameState } from './BoardGame';
 import playerMale from '@/assets/player-male.png';
@@ -19,11 +19,6 @@ type TokenStyle = {
   opacity: number;
 };
 
-type ArrowPath = {
-  from: number;
-  to: number;
-  d: string;
-};
 
 // 8 columns x 4 rows = 32 playing cells. Snake layout so consecutive cells
 // are physically adjacent (8 -> 9, 16 -> 17, 24 -> 25).
@@ -39,8 +34,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
   const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
   const [p2Style, setP2Style] = useState<TokenStyle | null>(null);
-  const [arrows, setArrows] = useState<ArrowPath[]>([]);
-  const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
 
   const getZoneClass = (cellNumber: number) => {
     if (cellNumber <= 10) return 'bg-gradient-zone-1';
@@ -121,30 +114,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
       setP1Style(applyScale(computeStyle(p1Pos, p1Offset), isCurrentP1 ? 1.2 : 1));
       setP2Style(applyScale(computeStyle(p2Pos, p2Offset), isCurrentP2 ? 1.2 : 1));
 
-
-      const cont = containerRef.current;
-      if (cont) {
-        setSvgSize({ w: cont.clientWidth, h: cont.clientHeight });
-      }
-
-      const newArrows: ArrowPath[] = [];
-      Object.entries(shortcuts).forEach(([fromStr, to]) => {
-        const from = Number(fromStr);
-        const a = cellRect(String(from));
-        const b = cellRect(String(to));
-        if (!a || !b) return;
-        const startX = a.x;
-        const startY = a.y - a.h * 0.25;
-        const endX = b.x;
-        const endY = b.y - b.h * 0.28;
-        const midX = (startX + endX) / 2;
-        const lift = Math.max(40, Math.abs(endX - startX) * 0.25);
-        const minY = Math.min(startY, endY);
-        const ctrlY = minY - lift;
-        const d = `M ${startX} ${startY} Q ${midX} ${ctrlY} ${endX} ${endY}`;
-        newArrows.push({ from, to, d });
-      });
-      setArrows(newArrows);
     };
     update();
     window.addEventListener('resize', update);
@@ -186,6 +155,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           {cellNumber}
         </div>
 
+        {isShortcut && (
+          <div
+            className="absolute top-1 right-1 flex items-center gap-0.5 rounded-md bg-yellow-400/95 px-1 py-0.5 text-[10px] font-bold text-slate-900 shadow-md ring-1 ring-yellow-600/40"
+            title={`Ladder to cell ${shortcuts[cellNumber]}`}
+          >
+            <ArrowUp className="h-3 w-3" strokeWidth={3} />
+            {shortcuts[cellNumber]}
+          </div>
+        )}
+
         {p1Activated && (
           <button
             onClick={(e) => { e.stopPropagation(); onReplayReward(cellNumber, 1); }}
@@ -214,6 +193,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     if (!style) return null;
     const isCurrent =
       gameState.currentPlayer === player && !gameState.isMoving && !gameState.gameWinner;
+    const teleScale = gameState.tokenScale?.[player] ?? 1;
     return (
       <div
         className="pointer-events-none absolute"
@@ -222,9 +202,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           top: style.top,
           width: style.width,
           height: style.height,
-          opacity: style.opacity,
+          opacity: style.opacity * teleScale,
+          transform: `scale(${teleScale})`,
+          transformOrigin: 'center center',
           transition:
-            'left 0.28s ease-in-out, top 0.28s ease-in-out, width 0.28s ease, height 0.28s ease, opacity 0.3s ease',
+            'left 0.28s ease-in-out, top 0.28s ease-in-out, width 0.28s ease, height 0.28s ease, opacity 0.4s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
           zIndex: 30,
         }}
       >
@@ -280,41 +262,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           ))}
         </div>
 
-        {/* Shortcut arrows overlay */}
-        {svgSize.w > 0 && (
-          <svg
-            className="pointer-events-none absolute inset-0"
-            width={svgSize.w}
-            height={svgSize.h}
-            style={{ zIndex: 15 }}
-          >
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="6"
-                markerHeight="6"
-                refX="5"
-                refY="3"
-                orient="auto"
-              >
-                <path d="M0,0 L6,3 L0,6 z" fill="hsl(48 100% 60%)" />
-              </marker>
-            </defs>
-            {arrows.map((a, i) => (
-              <path
-                key={i}
-                d={a.d}
-                stroke="hsl(48 100% 60%)"
-                strokeWidth={4}
-                strokeLinecap="round"
-                strokeDasharray="8 6"
-                fill="none"
-                opacity={0.85}
-                markerEnd="url(#arrowhead)"
-              />
-            ))}
-          </svg>
-        )}
 
         {renderToken(1, p1Style, playerMale)}
         {renderToken(2, p2Style, playerFemale)}

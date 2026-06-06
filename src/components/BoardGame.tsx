@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Trophy, ImageIcon, Pencil, Check } from 'lucide-react';
+import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Trophy, ImageIcon, Pencil, Check, ArrowUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { GameBoard } from './GameBoard';
 import { ImageStack } from './ImageStack';
@@ -61,6 +61,7 @@ export interface GameState {
   player1Stack: Array<{ gif: string; cellNumber: number }>;
   player2Stack: Array<{ gif: string; cellNumber: number }>;
   revealedGIFs: { [key: string]: string };
+  tokenScale: { 1: number; 2: number };
 }
 
 export const BoardGame: React.FC = () => {
@@ -77,7 +78,8 @@ export const BoardGame: React.FC = () => {
     gameWinner: null,
     player1Stack: [],
     player2Stack: [],
-    revealedGIFs: {}
+    revealedGIFs: {},
+    tokenScale: { 1: 1, 2: 1 }
   });
 
   const [showGIFModal, setShowGIFModal] = useState(false);
@@ -136,48 +138,22 @@ export const BoardGame: React.FC = () => {
     const currentPos = gameState[posField];
     const nextStart = gameState[nextField];
 
-    const startFrom = nextStart !== null ? nextStart - 1 : currentPos;
-    const targetPos = Math.min(startFrom + steps, BOARD_SIZE);
-    const totalSteps = targetPos - startFrom;
-
-    setGameState(prev => ({
-      ...prev,
-      isMoving: true,
-      [posField]: startFrom,
-      [nextField]: null,
-    }));
+    setGameState(prev => ({ ...prev, isMoving: true, [nextField]: null }));
     sounds.move();
 
     const STEP_MS = 300;
-    let step = 0;
 
-    const tick = () => {
-      step++;
-      const newPos = startFrom + step;
-      setGameState(prev => ({ ...prev, [posField]: newPos }));
-
-      if (step < totalSteps) {
-        setTimeout(tick, STEP_MS);
-        return;
-      }
-
-      // Final step landed
-      const winner: 1 | 2 | null = newPos >= BOARD_SIZE ? currentPlayer : null;
-      const shortcut = !winner ? (SHORTCUTS[newPos as keyof typeof SHORTCUTS] ?? null) : null;
-
+    const finish = (landed: number) => {
+      const winner: 1 | 2 | null = landed >= BOARD_SIZE ? currentPlayer : null;
+      const shortcut = !winner ? (SHORTCUTS[landed as keyof typeof SHORTCUTS] ?? null) : null;
       setGameState(prev => ({
         ...prev,
         isMoving: false,
         gameWinner: winner,
         [nextField]: shortcut,
       }));
-
-      if (winner) {
-        sounds.win();
-        return;
-      }
-
-      revealGIF(newPos, currentPlayer);
+      if (winner) { sounds.win(); return; }
+      revealGIF(landed, currentPlayer);
       if (shortcut !== null) {
         sounds.shortcut();
         toast({
@@ -187,7 +163,41 @@ export const BoardGame: React.FC = () => {
       }
     };
 
-    setTimeout(tick, STEP_MS);
+    const startStepping = (from: number, count: number) => {
+      const targetPos = Math.min(from + count, BOARD_SIZE);
+      const totalSteps = targetPos - from;
+      if (totalSteps <= 0) { finish(from); return; }
+      let step = 0;
+      const tick = () => {
+        step++;
+        const newPos = from + step;
+        setGameState(prev => ({ ...prev, [posField]: newPos }));
+        if (step < totalSteps) { setTimeout(tick, STEP_MS); return; }
+        finish(newPos);
+      };
+      setTimeout(tick, STEP_MS);
+    };
+
+    if (nextStart !== null) {
+      // Teleport: shrink at current cell, move to destination, grow back, then step (steps - 1) more
+      setGameState(prev => ({
+        ...prev,
+        tokenScale: { ...prev.tokenScale, [currentPlayer]: 0 },
+      }));
+      setTimeout(() => {
+        setGameState(prev => ({ ...prev, [posField]: nextStart }));
+        // Allow position to apply at scale 0, then grow back
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            tokenScale: { ...prev.tokenScale, [currentPlayer]: 1 },
+          }));
+          setTimeout(() => startStepping(nextStart, steps - 1), 500);
+        }, 60);
+      }, 450);
+    } else {
+      startStepping(currentPos, steps);
+    }
   };
 
   const revealGIF = (cellNumber: number, player: 1 | 2) => {
@@ -217,7 +227,7 @@ export const BoardGame: React.FC = () => {
       setTimeout(() => {
         setShowGIFModal(true);
         sounds.reveal();
-      }, 350);
+      }, 750);
       return newState;
     });
   };
@@ -255,7 +265,8 @@ export const BoardGame: React.FC = () => {
       gameWinner: null,
       player1Stack: [],
       player2Stack: [],
-      revealedGIFs: {}
+      revealedGIFs: {},
+      tokenScale: { 1: 1, 2: 1 }
     });
     setShowGIFModal(false);
     setShowImageStack(null);
