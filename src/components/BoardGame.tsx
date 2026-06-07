@@ -119,7 +119,7 @@ export const BoardGame: React.FC = () => {
   const [diceSettled, setDiceSettled] = useState(false);
   const [pendingDice, setPendingDice] = useState<number | null>(null);
 
-  const cellData = createSampleGIFs();
+  
 
   const rollDice = () => {
     if (gameState.isRolling || gameState.isMoving || gameState.gameWinner) return;
