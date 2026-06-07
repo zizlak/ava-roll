@@ -13,15 +13,20 @@ import { cn } from '@/lib/utils';
 import playerMale from '@/assets/player-male.png';
 import playerFemale from '@/assets/player-female.png';
 
-// Import sample GIFs
-import celebration1 from '@/assets/gifs/player1/celebration1.jpg';
-import adventure1 from '@/assets/gifs/player1/adventure1.jpg';
-import treasure1 from '@/assets/gifs/player1/treasure1.jpg';
-import dragon1 from '@/assets/gifs/player1/dragon1.jpg';
-import magic1 from '@/assets/gifs/player2/magic1.jpg';
-import space1 from '@/assets/gifs/player2/space1.jpg';
-import ocean1 from '@/assets/gifs/player2/ocean1.jpg';
-import forest1 from '@/assets/gifs/player2/forest1.jpg';
+// Auto-load all media files from the gifs folder.
+// Drop any new file into src/assets/gifs/player1/ or src/assets/gifs/player2/
+// (supports images, gifs, and videos) and it will appear in the game automatically.
+const player1Modules = import.meta.glob(
+  '@/assets/gifs/player1/*.{jpg,jpeg,png,gif,webp,mp4,webm,mov}',
+  { eager: true, query: '?url', import: 'default' }
+) as Record<string, string>;
+const player2Modules = import.meta.glob(
+  '@/assets/gifs/player2/*.{jpg,jpeg,png,gif,webp,mp4,webm,mov}',
+  { eager: true, query: '?url', import: 'default' }
+) as Record<string, string>;
+
+const player1Media = Object.values(player1Modules);
+const player2Media = Object.values(player2Modules);
 
 // Game data structure
 const BOARD_SIZE = 32;
@@ -35,8 +40,8 @@ const SHORTCUTS = {
 const DICE_ICONS = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
 
 const createSampleGIFs = () => {
-  const player1GIFs = [celebration1, adventure1, treasure1, dragon1];
-  const player2GIFs = [magic1, space1, ocean1, forest1];
+  const player1GIFs = player1Media;
+  const player2GIFs = player2Media;
   const cellData = [];
   for (let i = 1; i <= BOARD_SIZE; i++) {
     cellData.push({
