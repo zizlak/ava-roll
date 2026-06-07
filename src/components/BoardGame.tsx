@@ -227,8 +227,8 @@ export const BoardGame: React.FC = () => {
     setGameState(prev => {
       let gifUrl = prev.revealedGIFs[key];
       if (!gifUrl) {
-        const cell = cellData[cellNumber - 1];
-        const gifs = player === 1 ? cell.player1GIFs : cell.player2GIFs;
+        const gifs = getMediaForCell(player, cellNumber);
+        if (gifs.length === 0) return prev;
         const randomIndex = Math.floor(Math.random() * gifs.length);
         gifUrl = gifs[randomIndex];
       }
