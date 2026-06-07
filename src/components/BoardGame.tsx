@@ -40,8 +40,8 @@ const SHORTCUTS = {
 const DICE_ICONS = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
 
 const createSampleGIFs = () => {
-  const player1GIFs = [celebration1, adventure1, treasure1, dragon1];
-  const player2GIFs = [magic1, space1, ocean1, forest1];
+  const player1GIFs = player1Media;
+  const player2GIFs = player2Media;
   const cellData = [];
   for (let i = 1; i <= BOARD_SIZE; i++) {
     cellData.push({
