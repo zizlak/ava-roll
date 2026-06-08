@@ -409,6 +409,8 @@ export const BoardGame: React.FC = () => {
             gameState={gameState}
             shortcuts={SHORTCUTS}
             onReplayReward={replayReward}
+            player1Image={avatars[1].url}
+            player2Image={avatars[2].url}
           />
         </Card>
 
