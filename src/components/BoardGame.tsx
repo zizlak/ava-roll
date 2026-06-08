@@ -113,7 +113,7 @@ export const BoardGame: React.FC = () => {
   const [revealInfo, setRevealInfo] = useState<{ player: 1 | 2; cell: number } | null>(null);
   const [showImageStack, setShowImageStack] = useState<1 | 2 | null>(null);
   const [replayMode, setReplayMode] = useState(false);
-  const [playerNames, setPlayerNames] = useState<{ 1: string; 2: string }>({ 1: 'Player 1', 2: 'Player 2' });
+  const [playerNames, setPlayerNames] = useState<{ 1: string; 2: string }>({ 1: defaultP1.name, 2: defaultP2.name });
   const [editingPlayer, setEditingPlayer] = useState<1 | 2 | null>(null);
   const [nameDraft, setNameDraft] = useState('');
 
@@ -316,7 +316,7 @@ export const BoardGame: React.FC = () => {
     const isCurrent = gameState.currentPlayer === player;
     const pos = player === 1 ? gameState.player1Position : gameState.player2Position;
     const stack = player === 1 ? gameState.player1Stack : gameState.player2Stack;
-    const img = player === 1 ? playerMale : playerFemale;
+    const img = avatars[player].url;
     const isEditing = editingPlayer === player;
     const saveName = () => {
       const v = nameDraft.trim();
@@ -334,7 +334,13 @@ export const BoardGame: React.FC = () => {
             : 'border-border bg-card'
         )}
       >
-        <img src={img} alt={`Player ${player}`} className="w-12 h-12 object-contain" />
+        <button
+          onClick={() => { sounds.click(); setPickingAvatar(player); }}
+          className="shrink-0 rounded-full overflow-hidden hover:ring-2 hover:ring-primary/40 transition"
+          aria-label="Change avatar"
+        >
+          <img src={img} alt={`Player ${player}`} className="w-12 h-12 object-contain" />
+        </button>
         <div className="flex-1 min-w-0">
           {isEditing ? (
             <div className="flex items-center gap-1">
