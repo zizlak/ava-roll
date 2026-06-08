@@ -2,13 +2,13 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Crown, Flag, Play, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GameState } from './BoardGame';
-import playerMale from '@/assets/player-male.png';
-import playerFemale from '@/assets/player-female.png';
 
 interface GameBoardProps {
   gameState: GameState;
   shortcuts: { [key: number]: number };
   onReplayReward: (cellNumber: number, player: 1 | 2) => void;
+  player1Image: string;
+  player2Image: string;
 }
 
 type TokenStyle = {
@@ -29,7 +29,7 @@ const LAYOUT: number[][] = [
   [32, 31, 30, 29, 28, 27, 26, 25],
 ];
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, player1Image, player2Image }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
@@ -263,8 +263,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
         </div>
 
 
-        {renderToken(1, p1Style, playerMale)}
-        {renderToken(2, p2Style, playerFemale)}
+        {renderToken(1, p1Style, player1Image)}
+        {renderToken(2, p2Style, player2Image)}
       </div>
     </div>
   );
