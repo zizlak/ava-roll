@@ -467,8 +467,11 @@ export const BoardGame: React.FC = () => {
 
       {/* Reward Reveal Modal */}
       <Dialog open={showGIFModal} onOpenChange={setShowGIFModal}>
-        <DialogContent hideCloseButton className="max-w-4xl w-[90vw] h-[90vh] p-2">
-          <div className="relative h-full flex items-center justify-center">
+        <DialogContent className="max-w-4xl w-[90vw] h-[90vh] p-2">
+          <div
+            className="relative h-full flex items-center justify-center"
+            onClick={() => setShowGIFModal(false)}
+          >
             {revealInfo && (
               <div
                 className={cn(
@@ -479,7 +482,7 @@ export const BoardGame: React.FC = () => {
                 {playerNames[revealInfo.player]} • Cell {revealInfo.cell}
               </div>
             )}
-            <div className="text-center">
+            <div className="text-center" onClick={(e) => e.stopPropagation()}>
               {isVideo(currentGIF) ? (
                 <video
                   src={currentGIF}
@@ -506,6 +509,17 @@ export const BoardGame: React.FC = () => {
           player={showImageStack}
           stack={showImageStack === 1 ? gameState.player1Stack : gameState.player2Stack}
           onClose={() => setShowImageStack(null)}
+        />
+      )}
+
+      {pickingAvatar && (
+        <AvatarPicker
+          player={pickingAvatar}
+          onSelect={(a) => {
+            setAvatars(prev => ({ ...prev, [pickingAvatar]: a }));
+            setPlayerNames(prev => ({ ...prev, [pickingAvatar]: a.name }));
+          }}
+          onClose={() => setPickingAvatar(null)}
         />
       )}
     </div>
