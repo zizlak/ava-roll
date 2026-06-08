@@ -10,8 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sounds } from '@/lib/sounds';
 import { isVideo } from '@/lib/media';
 import { cn } from '@/lib/utils';
-import playerMale from '@/assets/player-male.png';
-import playerFemale from '@/assets/player-female.png';
+import { AvatarPicker, defaultAvatarFor, type Avatar } from './AvatarPicker';
 
 // Auto-load media per cell from src/assets/gifs/player{1,2}/cell{N}/*
 // Plus a default fallback per player at src/assets/gifs/player{1,2}/default.*
