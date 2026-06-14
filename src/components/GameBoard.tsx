@@ -12,6 +12,8 @@ interface GameBoardProps {
   currentPlayerName?: string;
   player1Image: string;
   player2Image: string;
+  player1Name?: string;
+  player2Name?: string;
 }
 
 type TokenStyle = {
@@ -32,7 +34,7 @@ const LAYOUT: number[][] = [
   [32, 31, 30, 29, 28, 27, 26, 25],
 ];
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image, player1Name, player2Name }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Record<string, HTMLElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
@@ -245,9 +247,53 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     );
   };
 
+  const renderSideAvatar = (player: 1 | 2) => {
+    const isCurrent = gameState.currentPlayer === player && !gameState.gameWinner;
+    const isWinner = gameState.gameWinner === player;
+    const img = player === 1 ? player1Image : player2Image;
+    const name = (player === 1 ? player1Name : player2Name) ?? `Player ${player}`;
+    const pos = player === 1 ? gameState.player1Position : gameState.player2Position;
+    return (
+      <div className="flex shrink-0 flex-col items-center gap-2 w-16 sm:w-24 md:w-32 select-none">
+        <div
+          className={cn(
+            'relative rounded-full p-1 transition-all duration-300',
+            player === 1 ? 'bg-player-1/10' : 'bg-player-2/10',
+            isCurrent &&
+              (player === 1
+                ? 'ring-4 ring-player-1 shadow-[0_0_22px_hsl(var(--player-1)/0.7)] animate-pulse'
+                : 'ring-4 ring-player-2 shadow-[0_0_22px_hsl(var(--player-2)/0.7)] animate-pulse'),
+            isWinner && 'ring-4 ring-amber-300 shadow-[0_0_28px_hsl(var(--player-1)/0.5)]'
+          )}
+        >
+          <img
+            src={img}
+            alt={name}
+            className="w-12 h-12 sm:w-20 sm:h-20 md:w-28 md:h-28 object-contain rounded-full"
+          />
+        </div>
+        <div className="text-center">
+          <div
+            className={cn(
+              'text-[11px] sm:text-sm font-bold truncate max-w-[4rem] sm:max-w-[6rem] md:max-w-[8rem]',
+              isCurrent && (player === 1 ? 'text-player-1' : 'text-player-2')
+            )}
+          >
+            {name}
+          </div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">
+            Cell <span className="font-bold text-foreground">{pos}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6">
-      <div ref={containerRef} className="relative">
+      <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6">
+        {renderSideAvatar(1)}
+        <div ref={containerRef} className="relative flex-1 min-w-0">
         {/* Start gate (pre-board home) */}
         <div className="mb-3 flex justify-center">
           <button
@@ -281,6 +327,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
 
         {renderToken(1, p1Style, player1Image)}
         {renderToken(2, p2Style, player2Image)}
+        </div>
+        {renderSideAvatar(2)}
       </div>
     </div>
   );

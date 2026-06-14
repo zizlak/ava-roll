@@ -416,6 +416,8 @@ export const BoardGame: React.FC = () => {
             currentPlayerName={playerNames[gameState.currentPlayer]}
             player1Image={avatars[1].url}
             player2Image={avatars[2].url}
+            player1Name={playerNames[1]}
+            player2Name={playerNames[2]}
           />
         </Card>
 
