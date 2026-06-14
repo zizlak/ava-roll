@@ -20,7 +20,8 @@ interface GameBoardProps {
   player1Name?: string;
   player2Name?: string;
   onAvatarPreview?: (player: 1 | 2) => void;
-  // 6 dice-face image URLs per player (index 0 = face "1"); null where missing.
+  onItemPreview?: (player: 1 | 2, faceIndex: number, url: string) => void;
+  // 5 dice-face image URLs per player (index 0 = face "1"); null where missing.
   player1Faces?: (string | null)[];
   player2Faces?: (string | null)[];
 }
@@ -43,7 +44,7 @@ const LAYOUT: number[][] = [
   [32, 31, 30, 29, 28, 27, 26, 25],
 ];
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image, player1Name, player2Name, onAvatarPreview, player1Faces, player2Faces }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image, player1Name, player2Name, onAvatarPreview, onItemPreview, player1Faces, player2Faces }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Record<string, HTMLElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
@@ -297,7 +298,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
   };
 
   const renderSideAvatar = (player: 1 | 2) => {
-    const isCurrent = gameState.currentPlayer === player && !gameState.gameWinner;
     const img = player === 1 ? player1Image : player2Image;
     const name = (player === 1 ? player1Name : player2Name) ?? `Player ${player}`;
     const anim = sideAnim[player];
@@ -306,7 +306,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
     const animating = crossAnim[player];
     const hasFaces = faces.some(Boolean);
     return (
-      <div className="flex shrink-0 flex-col items-center gap-2 w-16 sm:w-24 md:w-32">
+      <div className="flex shrink-0 flex-col items-center gap-3 w-24 sm:w-36 md:w-48">
         <button
           type="button"
           onClick={() => onAvatarPreview?.(player)}
@@ -320,59 +320,82 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
             src={img}
             alt={name}
             className={cn(
-              'w-16 sm:w-24 md:w-32 h-auto object-contain select-none transition-opacity duration-300',
-              isCurrent ? 'opacity-100' : 'opacity-50',
+              'w-24 sm:w-36 md:w-48 h-auto object-contain select-none',
               anim > 0 && 'animate-avatar-swap'
             )}
           />
         </button>
 
-        {hasFaces && (
-          <div className="grid grid-cols-2 gap-1.5">
-            {faces.map((faceUrl, i) => {
-              if (!faceUrl) return null;
-              const crossed = track[i] === 1;
-              const isAnimating = animating.includes(i);
-              return (
-                <div key={i} className="relative w-7 sm:w-9 md:w-11 aspect-square">
-                  <img
-                    src={faceUrl}
-                    alt={`Face ${i + 1}`}
-                    className={cn(
-                      'w-full h-full object-contain rounded-full ring-1 ring-border transition-opacity duration-300 select-none',
-                      crossed ? 'opacity-40' : 'opacity-100'
-                    )}
-                  />
-                  {crossed && (
-                    <svg
-                      viewBox="0 0 100 100"
-                      className="pointer-events-none absolute inset-0 h-full w-full"
-                      aria-hidden="true"
+        {hasFaces && (() => {
+          const items = faces
+            .map((url, i) => ({ url, i }))
+            .filter((it): it is { url: string; i: number } => Boolean(it.url));
+          return (
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <span className="text-[11px] sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Items
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {items.map((it, idx) => {
+                  const crossed = track[it.i] === 1;
+                  const isAnimating = animating.includes(it.i);
+                  // Center a lone trailing item when the count is odd.
+                  const lonely = idx === items.length - 1 && items.length % 2 === 1;
+                  return (
+                    <div
+                      key={it.i}
+                      className={cn('flex flex-col items-center gap-0.5', lonely && 'col-span-2')}
                     >
-                      <line
-                        x1="20" y1="20" x2="80" y2="80"
-                        stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
-                        className={cn(isAnimating && 'cross-stroke')}
-                      />
-                      <line
-                        x1="80" y1="20" x2="20" y2="80"
-                        stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
-                        className={cn(isAnimating && 'cross-stroke cross-stroke-2')}
-                      />
-                    </svg>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                      <button
+                        type="button"
+                        onClick={() => onItemPreview?.(player, it.i, it.url)}
+                        aria-label={`Preview item ${it.i + 1}`}
+                        className="relative w-10 sm:w-14 md:w-16 aspect-square cursor-pointer transition-transform hover:scale-110"
+                      >
+                        <img
+                          src={it.url}
+                          alt={`Item ${it.i + 1}`}
+                          className={cn(
+                            'w-full h-full object-contain rounded-full ring-1 ring-border transition-opacity duration-300 select-none',
+                            crossed ? 'opacity-40' : 'opacity-100'
+                          )}
+                        />
+                        {crossed && (
+                          <svg
+                            viewBox="0 0 100 100"
+                            className="pointer-events-none absolute inset-0 h-full w-full"
+                            aria-hidden="true"
+                          >
+                            <line
+                              x1="20" y1="20" x2="80" y2="80"
+                              stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
+                              className={cn(isAnimating && 'cross-stroke')}
+                            />
+                            <line
+                              x1="80" y1="20" x2="20" y2="80"
+                              stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
+                              className={cn(isAnimating && 'cross-stroke cross-stroke-2')}
+                            />
+                          </svg>
+                        )}
+                      </button>
+                      <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                        {it.i + 1}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6">
+    <div className="p-2 sm:p-3">
+      <div className="flex items-center justify-center gap-3 sm:gap-5 md:gap-8">
         {renderSideAvatar(1)}
         <div ref={containerRef} className="relative flex-1 min-w-0">
         {/* Start gate (pre-board home) */}
@@ -395,9 +418,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {LAYOUT.map((row, ri) => (
-            <div key={ri} className="grid grid-cols-8 gap-2">
+            <div key={ri} className="grid grid-cols-8 gap-3">
               {row.map((slot, ci) => (
                 <React.Fragment key={ci}>{renderCell(slot)}</React.Fragment>
               ))}

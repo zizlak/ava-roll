@@ -85,8 +85,8 @@ export interface GameState {
   player2Stack: Array<{ gif: string; cellNumber: number }>;
   revealedGIFs: { [key: string]: string };
   tokenScale: { 1: number; 2: number };
-  // Per-player dice-tracking: 6-element array, index (n-1) flips to 1 when n is
-  // rolled (starting from each player's 2nd draw). Rolling a 6 fills all to 1.
+  // Per-player dice-tracking: 5-element array (faces 1-5), index (n-1) flips to
+  // 1 when n is rolled (from each player's 2nd draw). Rolling a 6 fills all to 1.
   diceTrack: { 1: number[]; 2: number[] };
   rollCount: { 1: number; 2: number };
   // True while the dice-face cross-out animation plays; blocks rolling/moving.
@@ -109,7 +109,7 @@ export const BoardGame: React.FC = () => {
     player2Stack: [],
     revealedGIFs: {},
     tokenScale: { 1: 1, 2: 1 },
-    diceTrack: { 1: [0, 0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0, 0] },
+    diceTrack: { 1: [0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0] },
     rollCount: { 1: 0, 2: 0 },
     isAnimatingCross: false
   });
@@ -121,7 +121,7 @@ export const BoardGame: React.FC = () => {
 
   const [showGIFModal, setShowGIFModal] = useState(false);
   const [currentGIF, setCurrentGIF] = useState<string>('');
-  const [revealInfo, setRevealInfo] = useState<{ player: 1 | 2; cell: number | null } | null>(null);
+  const [revealInfo, setRevealInfo] = useState<{ player: 1 | 2; cell: number | null; label?: string } | null>(null);
   const [showImageStack, setShowImageStack] = useState<1 | 2 | null>(null);
   const [replayMode, setReplayMode] = useState(false);
   const [playerNames, setPlayerNames] = useState<{ 1: string; 2: string }>({ 1: defaultP1.name, 2: defaultP2.name });
@@ -166,8 +166,9 @@ export const BoardGame: React.FC = () => {
     const player = gameState.currentPlayer;
     setShowDiceModal(false);
 
-    // Dice tracking: only record from each player's 2nd draw onward. Rolling a 6
-    // fills the whole array. crossAdded = a face flipped 0 -> 1 this draw.
+    // Dice tracking (5 faces, 1-5): only record from each player's 2nd draw
+    // onward. Rolling a 6 fills the whole array. crossAdded = a face flipped
+    // 0 -> 1 this draw.
     const newCount = gameState.rollCount[player] + 1;
     const prevTrack = gameState.diceTrack[player];
     let track = prevTrack;
@@ -175,7 +176,7 @@ export const BoardGame: React.FC = () => {
     if (newCount >= 2) {
       if (value === 6) {
         if (prevTrack.some(v => v !== 1)) {
-          track = [1, 1, 1, 1, 1, 1];
+          track = [1, 1, 1, 1, 1];
           crossAdded = true;
         }
       } else if (prevTrack[value - 1] !== 1) {
@@ -201,6 +202,15 @@ export const BoardGame: React.FC = () => {
       if (url && url !== av.url) {
         setAvatars(prev => ({ ...prev, [player]: { ...prev[player], url } }));
       }
+    }
+
+    // Rolling a 6 (after the first draw) completes every item at once.
+    if (value === 6 && crossAdded) {
+      sounds.shortcut();
+      toast({
+        title: '🎉 Congratulations!',
+        description: `${playerNames[player]} rolled a 6 and collected all items!`,
+      });
     }
 
     // When a face is newly crossed, block the UI until the cross animation
@@ -324,6 +334,14 @@ export const BoardGame: React.FC = () => {
     setShowGIFModal(true);
   };
 
+  const previewItem = (player: 1 | 2, faceIndex: number, url: string) => {
+    sounds.click();
+    setCurrentGIF(url);
+    setRevealInfo({ player, cell: null, label: `${avatars[player].name}'s item Nr ${faceIndex + 1}` });
+    setReplayMode(true);
+    setShowGIFModal(true);
+  };
+
   const replayReward = (cellNumber: number, player: 1 | 2) => {
     const key = `${player}_${cellNumber}`;
     const url = gameState.revealedGIFs[key];
@@ -359,7 +377,7 @@ export const BoardGame: React.FC = () => {
       player2Stack: [],
       revealedGIFs: {},
       tokenScale: { 1: 1, 2: 1 },
-      diceTrack: { 1: [0, 0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0, 0] },
+      diceTrack: { 1: [0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0] },
       rollCount: { 1: 0, 2: 0 },
       isAnimatingCross: false
     });
@@ -455,8 +473,8 @@ export const BoardGame: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background p-2 sm:p-3">
+      <div className="max-w-[1700px] mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-foreground mb-2">
             Board Game Adventure
@@ -486,8 +504,9 @@ export const BoardGame: React.FC = () => {
             player1Name={playerNames[1]}
             player2Name={playerNames[2]}
             onAvatarPreview={previewAvatar}
-            player1Faces={[1, 2, 3, 4, 5, 6].map(n => progressionImageFor(avatars[1].gender, avatars[1].name, String(n)))}
-            player2Faces={[1, 2, 3, 4, 5, 6].map(n => progressionImageFor(avatars[2].gender, avatars[2].name, String(n)))}
+            onItemPreview={previewItem}
+            player1Faces={[1, 2, 3, 4, 5].map(n => progressionImageFor(avatars[1].gender, avatars[1].name, String(n)))}
+            player2Faces={[1, 2, 3, 4, 5].map(n => progressionImageFor(avatars[2].gender, avatars[2].name, String(n)))}
           />
         </Card>
 
@@ -549,7 +568,7 @@ export const BoardGame: React.FC = () => {
                   revealInfo.player === 1 ? 'bg-player-1' : 'bg-player-2'
                 )}
               >
-                {playerNames[revealInfo.player]}{revealInfo.cell !== null && ` • Cell ${revealInfo.cell}`}
+                {revealInfo.label ?? `${playerNames[revealInfo.player]}${revealInfo.cell !== null ? ` • Cell ${revealInfo.cell}` : ''}`}
               </div>
             )}
             <div className="text-center">

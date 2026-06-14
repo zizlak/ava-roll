@@ -30,8 +30,8 @@ export const femaleAvatars = toAvatars(femaleModules, 'female');
 export const allAvatars = [...maleAvatars, ...femaleAvatars];
 
 // Progression images live in per-character folders:
-//   src/assets/avatars/<gender>/<Name>/<bits>.<ext>   e.g. male/Albatros/010010.png
-// where <bits> is the 6-char dice-tracking string. Keyed as "gender/name/bits".
+//   src/assets/avatars/<gender>/<Name>/<bits>.<ext>   e.g. male/Albatros/01001.png
+// where <bits> is the 5-char dice-tracking string. Keyed as "gender/name/bits".
 const progressionModules = import.meta.glob(
   '@/assets/avatars/*/*/*.{png,jpg,jpeg,webp,gif}',
   { eager: true, query: '?url', import: 'default' }
