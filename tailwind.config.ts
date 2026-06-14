@@ -132,6 +132,11 @@ export default {
 				'fade-scale': {
 					'0%': { transform: 'scale(0.8)', opacity: '0' },
 					'100%': { transform: 'scale(1)', opacity: '1' }
+				},
+				'avatar-swap': {
+					'0%': { transform: 'scale(0.6) rotateY(-90deg)', opacity: '0', filter: 'brightness(2.2)' },
+					'55%': { transform: 'scale(1.15) rotateY(0deg)', opacity: '1', filter: 'brightness(1.5)' },
+					'100%': { transform: 'scale(1) rotateY(0deg)', opacity: '1', filter: 'brightness(1)' }
 				}
 			},
 			animation: {
@@ -142,7 +147,8 @@ export default {
 				'glow-pulse': 'glow-pulse 1.2s ease-in-out infinite',
 				'slide-up': 'slide-up 0.3s ease-out',
 				'fade-scale': 'fade-scale 0.3s ease-out',
-				'char-bounce': 'token-hop 0.7s ease-in-out infinite'
+				'char-bounce': 'token-hop 0.7s ease-in-out infinite',
+				'avatar-swap': 'avatar-swap 0.6s ease-out'
 			}
 		}
 	},

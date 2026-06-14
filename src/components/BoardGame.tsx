@@ -4,13 +4,13 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Trophy, ImageIcon, Pencil, Check, ArrowUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { GameBoard } from './GameBoard';
+import { GameBoard, CROSS_ANIM_MS } from './GameBoard';
 import { ImageStack } from './ImageStack';
 import { useToast } from '@/hooks/use-toast';
 import { sounds } from '@/lib/sounds';
 import { isVideo } from '@/lib/media';
 import { cn } from '@/lib/utils';
-import { AvatarPicker, defaultAvatarFor, type Avatar } from './AvatarPicker';
+import { AvatarPicker, defaultAvatarFor, progressionImageFor, type Avatar } from './AvatarPicker';
 
 // Auto-load media per cell from src/assets/gifs/player{1,2}/cell{N}/*
 // Plus a default fallback per player at src/assets/gifs/player{1,2}/default.*
@@ -85,6 +85,12 @@ export interface GameState {
   player2Stack: Array<{ gif: string; cellNumber: number }>;
   revealedGIFs: { [key: string]: string };
   tokenScale: { 1: number; 2: number };
+  // Per-player dice-tracking: 6-element array, index (n-1) flips to 1 when n is
+  // rolled (starting from each player's 2nd draw). Rolling a 6 fills all to 1.
+  diceTrack: { 1: number[]; 2: number[] };
+  rollCount: { 1: number; 2: number };
+  // True while the dice-face cross-out animation plays; blocks rolling/moving.
+  isAnimatingCross: boolean;
 }
 
 export const BoardGame: React.FC = () => {
@@ -102,7 +108,10 @@ export const BoardGame: React.FC = () => {
     player1Stack: [],
     player2Stack: [],
     revealedGIFs: {},
-    tokenScale: { 1: 1, 2: 1 }
+    tokenScale: { 1: 1, 2: 1 },
+    diceTrack: { 1: [0, 0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0, 0] },
+    rollCount: { 1: 0, 2: 0 },
+    isAnimatingCross: false
   });
 
   const defaultP1 = defaultAvatarFor(1);
@@ -112,7 +121,7 @@ export const BoardGame: React.FC = () => {
 
   const [showGIFModal, setShowGIFModal] = useState(false);
   const [currentGIF, setCurrentGIF] = useState<string>('');
-  const [revealInfo, setRevealInfo] = useState<{ player: 1 | 2; cell: number } | null>(null);
+  const [revealInfo, setRevealInfo] = useState<{ player: 1 | 2; cell: number | null } | null>(null);
   const [showImageStack, setShowImageStack] = useState<1 | 2 | null>(null);
   const [replayMode, setReplayMode] = useState(false);
   const [playerNames, setPlayerNames] = useState<{ 1: string; 2: string }>({ 1: defaultP1.name, 2: defaultP2.name });
@@ -128,7 +137,7 @@ export const BoardGame: React.FC = () => {
   
 
   const rollDice = () => {
-    if (gameState.isRolling || gameState.isMoving || gameState.gameWinner) return;
+    if (gameState.isRolling || gameState.isMoving || gameState.gameWinner || gameState.isAnimatingCross) return;
 
     sounds.diceRoll();
     setGameState(prev => ({ ...prev, isRolling: true }));
@@ -154,9 +163,56 @@ export const BoardGame: React.FC = () => {
     if (!diceSettled || pendingDice === null) return;
     sounds.click();
     const value = pendingDice;
+    const player = gameState.currentPlayer;
     setShowDiceModal(false);
-    setGameState(prev => ({ ...prev, diceValue: value }));
-    movePlayer(value);
+
+    // Dice tracking: only record from each player's 2nd draw onward. Rolling a 6
+    // fills the whole array. crossAdded = a face flipped 0 -> 1 this draw.
+    const newCount = gameState.rollCount[player] + 1;
+    const prevTrack = gameState.diceTrack[player];
+    let track = prevTrack;
+    let crossAdded = false;
+    if (newCount >= 2) {
+      if (value === 6) {
+        if (prevTrack.some(v => v !== 1)) {
+          track = [1, 1, 1, 1, 1, 1];
+          crossAdded = true;
+        }
+      } else if (prevTrack[value - 1] !== 1) {
+        track = prevTrack.slice();
+        track[value - 1] = 1;
+        crossAdded = true;
+      }
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      diceValue: value,
+      rollCount: { ...prev.rollCount, [player]: newCount },
+      diceTrack: { ...prev.diceTrack, [player]: track },
+      isAnimatingCross: crossAdded || prev.isAnimatingCross,
+    }));
+
+    // Avatar progression: look for <gender>/<name>/<bits>.<ext>; if it exists,
+    // swap the avatar everywhere. If not found, leave the avatar unchanged.
+    if (newCount >= 2) {
+      const av = avatars[player];
+      const url = progressionImageFor(av.gender, av.name, track.join(''));
+      if (url && url !== av.url) {
+        setAvatars(prev => ({ ...prev, [player]: { ...prev[player], url } }));
+      }
+    }
+
+    // When a face is newly crossed, block the UI until the cross animation
+    // finishes, then proceed with the move.
+    if (crossAdded) {
+      setTimeout(() => {
+        setGameState(prev => ({ ...prev, isAnimatingCross: false }));
+        movePlayer(value);
+      }, CROSS_ANIM_MS);
+    } else {
+      movePlayer(value);
+    }
   };
 
   const movePlayer = (steps: number) => {
@@ -260,6 +316,14 @@ export const BoardGame: React.FC = () => {
     });
   };
 
+  const previewAvatar = (player: 1 | 2) => {
+    sounds.click();
+    setCurrentGIF(avatars[player].url);
+    setRevealInfo({ player, cell: null });
+    setReplayMode(true);
+    setShowGIFModal(true);
+  };
+
   const replayReward = (cellNumber: number, player: 1 | 2) => {
     const key = `${player}_${cellNumber}`;
     const url = gameState.revealedGIFs[key];
@@ -294,7 +358,10 @@ export const BoardGame: React.FC = () => {
       player1Stack: [],
       player2Stack: [],
       revealedGIFs: {},
-      tokenScale: { 1: 1, 2: 1 }
+      tokenScale: { 1: 1, 2: 1 },
+      diceTrack: { 1: [0, 0, 0, 0, 0, 0], 2: [0, 0, 0, 0, 0, 0] },
+      rollCount: { 1: 0, 2: 0 },
+      isAnimatingCross: false
     });
     setShowGIFModal(false);
     setShowImageStack(null);
@@ -418,6 +485,9 @@ export const BoardGame: React.FC = () => {
             player2Image={avatars[2].url}
             player1Name={playerNames[1]}
             player2Name={playerNames[2]}
+            onAvatarPreview={previewAvatar}
+            player1Faces={[1, 2, 3, 4, 5, 6].map(n => progressionImageFor(avatars[1].gender, avatars[1].name, String(n)))}
+            player2Faces={[1, 2, 3, 4, 5, 6].map(n => progressionImageFor(avatars[2].gender, avatars[2].name, String(n)))}
           />
         </Card>
 
@@ -479,7 +549,7 @@ export const BoardGame: React.FC = () => {
                   revealInfo.player === 1 ? 'bg-player-1' : 'bg-player-2'
                 )}
               >
-                {playerNames[revealInfo.player]} • Cell {revealInfo.cell}
+                {playerNames[revealInfo.player]}{revealInfo.cell !== null && ` • Cell ${revealInfo.cell}`}
               </div>
             )}
             <div className="text-center">
@@ -520,6 +590,11 @@ export const BoardGame: React.FC = () => {
           }}
           onClose={() => setPickingAvatar(null)}
         />
+      )}
+
+      {/* Block interaction while a dice-face cross-out animation is playing */}
+      {gameState.isAnimatingCross && (
+        <div className="fixed inset-0 z-50 cursor-wait" aria-hidden="true" />
       )}
     </div>
   );

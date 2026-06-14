@@ -1,7 +1,12 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Flag, ArrowUp, Dice6 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GameState } from './BoardGame';
+
+// Total duration of the dice-face cross-out animation (two 0.28s strokes,
+// the second delayed by 0.28s) plus a small buffer. BoardGame waits this long
+// before resuming the move so the animation is never cut off.
+export const CROSS_ANIM_MS = 700;
 
 interface GameBoardProps {
   gameState: GameState;
@@ -14,6 +19,10 @@ interface GameBoardProps {
   player2Image: string;
   player1Name?: string;
   player2Name?: string;
+  onAvatarPreview?: (player: 1 | 2) => void;
+  // 6 dice-face image URLs per player (index 0 = face "1"); null where missing.
+  player1Faces?: (string | null)[];
+  player2Faces?: (string | null)[];
 }
 
 type TokenStyle = {
@@ -34,11 +43,50 @@ const LAYOUT: number[][] = [
   [32, 31, 30, 29, 28, 27, 26, 25],
 ];
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image, player1Name, player2Name }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onReplayReward, onStartClick, started, currentPlayerName, player1Image, player2Image, player1Name, player2Name, onAvatarPreview, player1Faces, player2Faces }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Record<string, HTMLElement | null>>({});
   const [p1Style, setP1Style] = useState<TokenStyle | null>(null);
   const [p2Style, setP2Style] = useState<TokenStyle | null>(null);
+
+  // Bump a counter when a side avatar image changes so its <img> remounts and
+  // replays the swap animation. Starts at 0 (no animation on first mount).
+  const sideImgRef = useRef<{ 1: string; 2: string }>({ 1: player1Image, 2: player2Image });
+  const [sideAnim, setSideAnim] = useState<{ 1: number; 2: number }>({ 1: 0, 2: 0 });
+  useEffect(() => {
+    if (sideImgRef.current[1] !== player1Image) {
+      sideImgRef.current[1] = player1Image;
+      setSideAnim((p) => ({ ...p, 1: p[1] + 1 }));
+    }
+    if (sideImgRef.current[2] !== player2Image) {
+      sideImgRef.current[2] = player2Image;
+      setSideAnim((p) => ({ ...p, 2: p[2] + 1 }));
+    }
+  }, [player1Image, player2Image]);
+
+  // Detect dice faces that flipped 0 -> 1 this turn and play the cross-draw
+  // animation on them. The set clears after the animation so the cross becomes
+  // a static "disabled" mark.
+  const prevTrackRef = useRef<{ 1: number[]; 2: number[] }>({
+    1: [...gameState.diceTrack[1]],
+    2: [...gameState.diceTrack[2]],
+  });
+  const [crossAnim, setCrossAnim] = useState<{ 1: number[]; 2: number[] }>({ 1: [], 2: [] });
+  useEffect(() => {
+    ([1, 2] as const).forEach((pl) => {
+      const prev = prevTrackRef.current[pl];
+      const cur = gameState.diceTrack[pl];
+      const newly = cur.reduce<number[]>((acc, v, i) => {
+        if (v === 1 && prev[i] !== 1) acc.push(i);
+        return acc;
+      }, []);
+      prevTrackRef.current[pl] = [...cur];
+      if (newly.length) {
+        setCrossAnim((s) => ({ ...s, [pl]: newly }));
+        setTimeout(() => setCrossAnim((s) => ({ ...s, [pl]: [] })), CROSS_ANIM_MS);
+      }
+    });
+  }, [gameState.diceTrack]);
 
   const getZoneClass = (cellNumber: number) => {
     if (cellNumber <= 10) return 'bg-gradient-zone-1';
@@ -235,8 +283,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
             alt={`Player ${player}`}
             width={128}
             height={128}
+            onClick={(e) => { e.stopPropagation(); onAvatarPreview?.(player); }}
             className={cn(
-              'w-[75%] h-[75%] object-contain drop-shadow-lg',
+              'w-[75%] h-[75%] object-contain drop-shadow-lg pointer-events-auto cursor-pointer hover:scale-105 transition-transform',
               player === 1
                 ? 'drop-shadow-[0_4px_6px_hsl(var(--player-1)/0.6)]'
                 : 'drop-shadow-[0_4px_6px_hsl(var(--player-2)/0.6)]'
@@ -249,42 +298,74 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, shortcuts, onRe
 
   const renderSideAvatar = (player: 1 | 2) => {
     const isCurrent = gameState.currentPlayer === player && !gameState.gameWinner;
-    const isWinner = gameState.gameWinner === player;
     const img = player === 1 ? player1Image : player2Image;
     const name = (player === 1 ? player1Name : player2Name) ?? `Player ${player}`;
-    const pos = player === 1 ? gameState.player1Position : gameState.player2Position;
+    const anim = sideAnim[player];
+    const faces = (player === 1 ? player1Faces : player2Faces) ?? [];
+    const track = gameState.diceTrack[player];
+    const animating = crossAnim[player];
+    const hasFaces = faces.some(Boolean);
     return (
-      <div className="flex shrink-0 flex-col items-center gap-2 w-16 sm:w-24 md:w-32 select-none">
-        <div
-          className={cn(
-            'relative rounded-full p-1 transition-all duration-300',
-            player === 1 ? 'bg-player-1/10' : 'bg-player-2/10',
-            isCurrent &&
-              (player === 1
-                ? 'ring-4 ring-player-1 shadow-[0_0_22px_hsl(var(--player-1)/0.7)] animate-pulse'
-                : 'ring-4 ring-player-2 shadow-[0_0_22px_hsl(var(--player-2)/0.7)] animate-pulse'),
-            isWinner && 'ring-4 ring-amber-300 shadow-[0_0_28px_hsl(var(--player-1)/0.5)]'
-          )}
+      <div className="flex shrink-0 flex-col items-center gap-2 w-16 sm:w-24 md:w-32">
+        <button
+          type="button"
+          onClick={() => onAvatarPreview?.(player)}
+          aria-label={`Preview ${name}`}
+          title={name}
+          className="cursor-pointer transition-transform hover:scale-105"
+          style={{ perspective: '600px' }}
         >
           <img
+            key={anim}
             src={img}
             alt={name}
-            className="w-12 h-12 sm:w-20 sm:h-20 md:w-28 md:h-28 object-contain rounded-full"
-          />
-        </div>
-        <div className="text-center">
-          <div
             className={cn(
-              'text-[11px] sm:text-sm font-bold truncate max-w-[4rem] sm:max-w-[6rem] md:max-w-[8rem]',
-              isCurrent && (player === 1 ? 'text-player-1' : 'text-player-2')
+              'w-16 sm:w-24 md:w-32 h-auto object-contain select-none transition-opacity duration-300',
+              isCurrent ? 'opacity-100' : 'opacity-50',
+              anim > 0 && 'animate-avatar-swap'
             )}
-          >
-            {name}
+          />
+        </button>
+
+        {hasFaces && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {faces.map((faceUrl, i) => {
+              if (!faceUrl) return null;
+              const crossed = track[i] === 1;
+              const isAnimating = animating.includes(i);
+              return (
+                <div key={i} className="relative w-7 sm:w-9 md:w-11 aspect-square">
+                  <img
+                    src={faceUrl}
+                    alt={`Face ${i + 1}`}
+                    className={cn(
+                      'w-full h-full object-contain rounded-full ring-1 ring-border transition-opacity duration-300 select-none',
+                      crossed ? 'opacity-40' : 'opacity-100'
+                    )}
+                  />
+                  {crossed && (
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      aria-hidden="true"
+                    >
+                      <line
+                        x1="20" y1="20" x2="80" y2="80"
+                        stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
+                        className={cn(isAnimating && 'cross-stroke')}
+                      />
+                      <line
+                        x1="80" y1="20" x2="20" y2="80"
+                        stroke="rgb(239 68 68)" strokeWidth="12" strokeLinecap="round"
+                        className={cn(isAnimating && 'cross-stroke cross-stroke-2')}
+                      />
+                    </svg>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground">
-            Cell <span className="font-bold text-foreground">{pos}</span>
-          </div>
-        </div>
+        )}
       </div>
     );
   };
